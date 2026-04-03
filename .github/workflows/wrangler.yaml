@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
+      - "docs/**"
+      - "scripts/**"
 jobs:
   deploy:
     runs-on: ubuntu-latest

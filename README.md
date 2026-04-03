@@ -1,75 +1,85 @@
-# React + TypeScript + Vite
+# Tracker UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend application built with React, TypeScript and Vite. The UI surfaces mood-related features, weather data, and curated deals (see the `src/` and `api/` folders for the app modules).
 
-Currently, two official plugins are available:
+## Quick start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Prerequisites: Node 18+ and npm installed.
+- Install dependencies:
 
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- Run development server with HMR:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+- Build for production:
+
+```bash
+npm run build
+```
+
+- Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Useful scripts
+
+- **dev**: Runs the Vite dev server (`npm run dev`).
+- **build**: Type-checks and builds the app (`npm run build`).
+- **preview**: Serves the production build locally (`npm run preview`).
+- **test**: Runs unit tests with `vitest` (`npm run test`).
+- **lint**: Runs `eslint` over the project (`npm run lint`).
+- **scenarios**: Runs the mood scenarios script (`npm run scenarios`).
+- **deploy**: Builds and deploys via Cloudflare Pages using `wrangler` (`npm run deploy`).
+
+All scripts are defined in `package.json`.
+
+## Project structure (selected)
+
+- [src/](src/) — React app sources and views.
+- [src/App.tsx](src/App.tsx) — application root component.
+- [src/main.tsx](src/main.tsx) — app entry and bootstrapping.
+- [src/api/](src/api/) — API adapters and mocks (e.g. `weather.ts`, `ozbargain.ts`).
+- [src/components/](src/components/) — UI components and primitives.
+- [lib/crypto.ts](lib/crypto.ts) — local crypto helpers used by the app.
+- [utils/mood-calculator.ts](utils/mood-calculator.ts) — mood scoring logic and tests.
+- [scripts/run-mood-scenarios.ts](scripts/run-mood-scenarios.ts) — helper script for running scenario simulations.
+- [wrangler.toml](wrangler.toml) — configuration used for Cloudflare Pages deployment.
+
+## Testing & Linting
+
+- Run tests:
+
+```bash
+npm run test
+```
+
+- Run linters:
+
+```bash
+npm run lint
+```
+
+## Deployment
+
+This project includes a `wrangler.toml` configured for Cloudflare Pages. Use `npm run deploy` to build and push the `./dist` output.
+
+## Notes
+
+- The project uses `vite`, `react`, `typescript`, and `vitest` for development and testing.
+- If you need to run the mood scenarios locally, use `npm run scenarios` (it uses `ts-node` to execute `scripts/run-mood-scenarios.ts`).
+
+## Contributing
+
+Open a PR with changes, run tests and linters before merging.
+
+---
+
+If you'd like, I can expand sections (examples, environment variables, or developer notes). Want me to add usage screenshots or a local debug checklist?
