@@ -70,7 +70,7 @@ export const calculateMoodScore = (apiData) => {
     }
 
     // B: Temperature Context (Harsh sun is NEVER a bonus if >70% harsh)
-    if (temp < 18 && sunHarshness < 65) {
+    if (temp < 15 && sunHarshness > 40) {
       const sunBonus = Math.min(uv * 1.5, 10);
       score += sunBonus;
       factors.push({ label: "Pleasant Winter Sun", impact: Math.round(sunBonus) });
@@ -78,7 +78,7 @@ export const calculateMoodScore = (apiData) => {
 
     // C: THE SYNERGY PENALTY (The 'Tropical Wall')
     // If both are > 70%, add a compounding penalty
-    if (sunHarshness > 70 && hum > 70) {
+    if (sunHarshness > 70 && hum > 70 && temp > 16) {
       const synergyPenalty = 15;
       score -= synergyPenalty;
       factors.push({ label: "Tropical Intensity", impact: -synergyPenalty });
