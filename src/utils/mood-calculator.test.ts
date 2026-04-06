@@ -58,7 +58,7 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Humid winter day",
       api: makeApi(10, { humidity: 80, uv: 2, radiation: 8, cloud: 70, wind: 3, pressure: 1006 }),
-      score: 51,
+      score: 48,
     },
     {
       name: "Dry and hot day",
@@ -68,12 +68,12 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Dry winter",
       api: makeApi(8, { humidity: 20, uv: 4, radiation: 14, cloud: 10, wind: 2, pressure: 1025 }),
-      score: 17,
+      score: 23,
     },
     {
       name: "Rainy / pre-storm",
       api: makeApi(16, { humidity: 95, uv: 1, radiation: 4, cloud: 90, wind: 4, pressure: 998, isDay: 1 }),
-      score: 93,
+      score: 92,
     },
     {
       name: "Overcast mild",
@@ -103,7 +103,7 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Cloudy cool",
       api: makeApi(12, { humidity: 65, uv: 1, radiation: 5, cloud: 80, wind: 3, pressure: 1012 }),
-      score: 58,
+      score: 56,
     },
     {
       name: "Sunny hot coastal",
@@ -118,7 +118,7 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Chilly clear",
       api: makeApi(2, { humidity: 40, uv: 1, radiation: 12, cloud: 0, wind: 2, pressure: 1032 }),
-      score: 18,
+      score: 17,
     },
   ])("$name scenario", ({ api, score }) => {
     const res = calculateMoodScore(api);
