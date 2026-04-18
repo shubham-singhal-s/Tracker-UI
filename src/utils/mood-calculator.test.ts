@@ -43,12 +43,12 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Ideal day",
       api: makeApi(22, { humidity: 30, uv: 3, radiation: 18, cloud: 40, wind: 3, pressure: 1025 }),
-      score: 100,
+      score: 101,
     },
     {
       name: "Clear day",
       api: makeApi(22, { humidity: 45, uv: 3, radiation: 18, cloud: 20, wind: 3, pressure: 1013 }),
-      score: 90,
+      score: 92,
     },
     {
       name: "Hot and humid day",
@@ -68,7 +68,7 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Dry winter",
       api: makeApi(8, { humidity: 20, uv: 4, radiation: 14, cloud: 10, wind: 2, pressure: 1025 }),
-      score: 23,
+      score: 46,
     },
     {
       name: "Rainy / pre-storm",
@@ -98,7 +98,7 @@ describe("Mood Caclulator - Individual calcs", () => {
     {
       name: "Pleasant spring",
       api: makeApi(21, { humidity: 50, uv: 4, radiation: 20, cloud: 10, wind: 3, pressure: 1016 }),
-      score: 81,
+      score: 87,
     },
     {
       name: "Cloudy cool",

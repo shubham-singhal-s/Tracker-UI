@@ -16,6 +16,34 @@ function temperatureComfortScore(temp: number): number {
   const distance = temp < COMFORT_MIN ? COMFORT_MIN - temp : temp - COMFORT_MAX;
   return 100 * Math.exp(-0.5 * Math.pow(distance / SD, 2));
 }
+
+function sunTempMultiplier(tempC) {
+  const minT = 6;
+  const maxT = 25;
+  const midpoint = (minT + maxT) / 2; // 15.5
+  const steepness = 0.25;
+
+  const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+
+  // raw sigmoid values at bounds (for normalization)
+  const sMin = sigmoid((minT - midpoint) * steepness);
+  const sMax = sigmoid((maxT - midpoint) * steepness);
+
+  // current value
+  const s = sigmoid((tempC - midpoint) * steepness);
+
+  // normalize to [0, 1]
+  const normalized = (s - sMin) / (sMax - sMin);
+
+  // map to [-1, 1]
+  let value = normalized * 2 - 1;
+
+  // clamp inline
+  if (value < -1) return -1;
+  if (value > 1) return 1;
+  return value;
+}
+
 export const calculateMoodScore = (apiData) => {
   const { current, daily } = apiData;
   const temp = current.apparent_temperature;
@@ -37,6 +65,7 @@ export const calculateMoodScore = (apiData) => {
   // 2. SUN HARSHNESS (The Standalone Intensity Metric)
   const rawIntensity = uv * 4.0 + radiation * 1.0;
   const skyClarity = 1 + (100 - cloud) / 100;
+  const sunMultiplier = sunTempMultiplier(temp);
   const sunHarshness = (rawIntensity / 65) * skyClarity * 80;
 
   // 3: Lowered Mugginess Gate (Center at 22.5°C now)
@@ -65,7 +94,8 @@ export const calculateMoodScore = (apiData) => {
       // Using multiplier 0.6 for glare penalty — e.g. 80% harshness
       // yields (80 - 50) * 0.6 ≈ 18 point drop.
       const glarePenalty = (sunHarshness - 50) * 0.6;
-      score -= glarePenalty;
+      // Harsh sun penalty decreases with low temps
+      score -= glarePenalty * sunMultiplier;
       factors.push({ label: "Solar Intensity", impact: -Math.round(glarePenalty) });
     }
 
