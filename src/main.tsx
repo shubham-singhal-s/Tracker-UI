@@ -11,6 +11,8 @@ import { NotificationSubscriber } from "./notification.tsx";
 
 const Encrypt = lazy(() => import("./encrypt"));
 
+const About = lazy(() => import("./about"));
+
 const queryClient = new QueryClient();
 
 const RootRoute = createRootRoute({
@@ -48,7 +50,17 @@ const EncryptRoute = createRoute({
   ),
 });
 
-const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute]);
+const AboutRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: "/about",
+  component: () => (
+    <Suspense fallback={<div className="p-4">Loading…</div>}>
+      <About />
+    </Suspense>
+  ),
+});
+
+const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute, AboutRoute]);
 
 const router = createRouter({
   routeTree,

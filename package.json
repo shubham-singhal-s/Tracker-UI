@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "NODE_ENV=development vite",
     "prebuild": "npm run test",
-    "build": "tsc -b && vite build",
+    "build": "VITE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) sh -c \"tsc -b && vite build\"",
     "postbuild": "echo 'Build complete.' && find ./dist -name '*.js' -exec du -ch {} + | grep total",
     "lint": "eslint .",
     "test": "vitest run",
