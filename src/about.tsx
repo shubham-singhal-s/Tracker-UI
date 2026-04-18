@@ -21,8 +21,6 @@ const About = () => {
     return `${datePart} - ${timePart}`;
   };
 
-  const utcString = isBuilt ? formatDate(buildDate, { timeZone: "UTC" }) : undefined;
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
       <div className="w-full max-w-xl bg-white dark:bg-gray-800 shadow-md rounded-lg p-8">
