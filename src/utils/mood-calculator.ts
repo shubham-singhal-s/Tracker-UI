@@ -96,7 +96,7 @@ export const calculateMoodScore = (apiData) => {
       const glarePenalty = (sunHarshness - 50) * 0.6;
       // Harsh sun penalty decreases with low temps
       score -= glarePenalty * sunMultiplier;
-      factors.push({ label: "Solar Intensity", impact: -Math.round(glarePenalty) });
+      factors.push({ label: "Solar Intensity", impact: -Math.round(glarePenalty * sunMultiplier) });
     }
 
     // B: Temperature Context (Harsh sun is NEVER a bonus if >70% harsh)
