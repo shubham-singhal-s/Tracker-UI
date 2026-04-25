@@ -51,18 +51,22 @@ type Scenario = {
 };
 
 function makeApi(temp: number, overrides: any = {}) {
+  const apparent = overrides.apparent ?? temp;
   return {
     current: {
-      apparent_temperature: temp,
+      temperature_2m: temp,
+      apparent_temperature: apparent,
       relative_humidity_2m: overrides.humidity ?? 50,
       cloud_cover: overrides.cloud ?? 20,
       is_day: overrides.isDay ?? 1,
       wind_speed_10m: overrides.wind ?? 2,
       pressure_msl: overrides.pressure ?? 1013.25,
+      precipitation: overrides.precipitation ?? 0,
     },
     daily: {
       uv_index_max: [overrides.uv ?? 3],
-      shortwave_radiation_sum: [overrides.radiation ?? 100],
+      shortwave_radiation_sum: [overrides.radiation ?? 18],
+      precipitation_sum: [overrides.dailyPrecipitation ?? 0],
     },
   };
 }
@@ -119,6 +123,18 @@ const scenarios: Scenario[] = [
     name: "Chilly clear",
     input: makeApi(2, { humidity: 40, uv: 1, radiation: 12, cloud: 0, wind: 2, pressure: 1032 }),
   },
+  {
+    name: "Pleasant evening",
+    input: makeApi(21, { humidity: 50, uv: 0, radiation: 0, cloud: 30, wind: 5, pressure: 1015, isDay: 0 }),
+  },
+  {
+    name: "Gentle drizzle",
+    input: makeApi(17, { humidity: 85, uv: 1, radiation: 5, cloud: 90, wind: 3, pressure: 1009, precipitation: 1.5 }),
+  },
+  {
+    name: "Thunderstorm",
+    input: makeApi(19, { humidity: 95, uv: 2, radiation: 8, cloud: 100, wind: 28, pressure: 996, precipitation: 25 }),
+  },
 ];
 
 function printScenario(s: Scenario) {
@@ -142,11 +158,11 @@ function printScenario(s: Scenario) {
       gray(`UV: `) +
       `${String(UV)}, ` +
       gray(`Radiation: `) +
-      `${String(R)} W/m², ` +
+      `${String(R)} MJ/m², ` +
       gray(`Cloud: `) +
       `${String(C)}%, ` +
       gray(`Wind: `) +
-      `${String(W)} m/s, ` +
+      `${String(W)} km/h, ` +
       gray(`Pressure: `) +
       `${String(P)} hPa`,
   );
