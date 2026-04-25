@@ -4,17 +4,21 @@ const sigmoid = (x: number, k: number, x0: number) => 1 / (1 + Math.exp(-k * (x 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 /* ------------------------------------------------------------------ */
-/*  Temperature Comfort — Gaussian plateau 20–24°C with σ=7           */
+/*  Temperature Comfort — Gaussian plateau 19–25°C with asymmetric σ  */
+/*  Cooler side is more tolerable than heat in NSW                    */
 /* ------------------------------------------------------------------ */
 function temperatureComfortScore(temp: number): number {
-  const COMFORT_MIN = 20;
-  const COMFORT_MAX = 24;
-  const SD = 7;
+  const COMFORT_MIN = 19;
+  const COMFORT_MAX = 25;
+  const SD_COLD = 8;
+  const SD_HOT = 5.5;
 
   if (temp >= COMFORT_MIN && temp <= COMFORT_MAX) return 100;
 
-  const distance = temp < COMFORT_MIN ? COMFORT_MIN - temp : temp - COMFORT_MAX;
-  return 100 * Math.exp(-0.5 * Math.pow(distance / SD, 2));
+  if (temp < COMFORT_MIN) {
+    return 100 * Math.exp(-0.5 * Math.pow((COMFORT_MIN - temp) / SD_COLD, 2));
+  }
+  return 100 * Math.exp(-0.5 * Math.pow((temp - COMFORT_MAX) / SD_HOT, 2));
 }
 
 /* ------------------------------------------------------------------ */
@@ -39,10 +43,12 @@ function calculateSunHarshness(uv: number, radiation: number, cloud: number): nu
 
 /* ------------------------------------------------------------------ */
 /*  Humidity Penalty — context-aware by temperature                   */
+/*  NSW coastal baseline 60–70%; penalty only kicks in meaningfully   */
+/*  above ~26 °C where mugginess is genuinely uncomfortable.          */
 /* ------------------------------------------------------------------ */
 function humidityPenalty(temp: number, hum: number, wind: number): { penalty: number; relief: number } {
-  const humidityWeight = sigmoid(temp, 0.5, 21); // ramps up around 21°C
-  const basePenalty = humidityWeight * Math.max(0, hum - 58) * 1.2;
+  const humidityWeight = sigmoid(temp, 0.35, 26); // ramps up around 26°C
+  const basePenalty = humidityWeight * Math.max(0, hum - 65) * 1.2;
 
   let relief = 0;
   if (temp > 18 && temp < 30 && wind > 12 && basePenalty > 2) {
@@ -109,26 +115,41 @@ function precipitationImpact(precipMm: number, temp: number, cloud: number): { i
 }
 
 /* ------------------------------------------------------------------ */
-/*  Apparent vs Actual Temp Delta                                     */
+/*  Apparent vs Actual Temp Delta — soft-capped log taper             */
 /* ------------------------------------------------------------------ */
-function apparentDeltaImpact(actual: number, apparent: number, wind: number): { impact: number; label: string } {
+function apparentDeltaImpact(actual: number, apparent: number): { impact: number; label: string } {
   const delta = apparent - actual;
 
-  if (delta > 4) return { impact: -Math.round(delta * 1.5), label: "Heat Index Stress" };
-  if (delta > 2) return { impact: -Math.round(delta), label: "Feels Warmer" };
-  if (delta < -4) return { impact: -Math.round(Math.abs(delta) * 1.2), label: "Wind Chill" };
-  if (delta < -2) return { impact: -2, label: "Cool Breeze Effect" };
+  // Positive delta = feels hotter (mugginess / heat index)
+  if (delta > 2) {
+    const raw = delta * 1.5;
+    const capped = Math.min(raw, 15); // soft cap at -15
+    const impact = -Math.round(capped);
+    return { impact, label: delta > 4 ? "Heat Index Stress" : "Feels Warmer" };
+  }
+
+  // Negative delta = feels colder (wind chill)
+  if (delta < -4) {
+    const raw = Math.abs(delta) * 1.2;
+    const capped = Math.min(raw, 15);
+    return { impact: -Math.round(capped), label: "Wind Chill" };
+  }
+  if (delta < -2) {
+    return { impact: -2, label: "Cool Breeze Effect" };
+  }
 
   return { impact: 0, label: "" };
 }
 
 /* ------------------------------------------------------------------ */
 /*  Main Entrypoint                                                   */
+/*  CRITICAL: actualTemp (temperature_2m) drives all comfort curves;  */
+/*  apparent_temperature is reserved solely for the delta calculation */
 /* ------------------------------------------------------------------ */
 export const calculateMoodScore = (apiData: any) => {
   const { current, daily } = apiData;
-  const temp = current.apparent_temperature;
-  const actualTemp = current.temperature_2m ?? temp;
+  const apparentTemp = current.apparent_temperature;
+  const actualTemp = current.temperature_2m ?? apparentTemp;
   const hum = current.relative_humidity_2m;
   const uv = daily.uv_index_max?.[0] ?? 0;
   const radiation = daily.shortwave_radiation_sum?.[0] ?? 0; // MJ/m²
@@ -140,21 +161,22 @@ export const calculateMoodScore = (apiData: any) => {
 
   const factors: any[] = [];
 
-  // 1. BASE TEMPERATURE COMFORT
-  let score = temperatureComfortScore(temp);
+  // 1. BASE TEMPERATURE COMFORT (uses actual temp to avoid double-counting)
+  let score = temperatureComfortScore(actualTemp);
   factors.push({ label: "Temperature Comfort", impact: Math.round(score) });
 
   // 2. APPARENT TEMP DELTA (mugginess or wind chill)
-  const deltaFx = apparentDeltaImpact(actualTemp, temp, wind);
+  const deltaFx = apparentDeltaImpact(actualTemp, apparentTemp);
   if (deltaFx.impact !== 0) {
     score += deltaFx.impact;
     factors.push({ label: deltaFx.label, impact: deltaFx.impact });
   }
 
-  // 3. HUMIDITY & MUGGINESS
-  const { penalty: humPenalty, relief: windRelief } = humidityPenalty(temp, hum, wind);
+  // 3. HUMIDITY & MUGGINESS (uses actual temp)
+  const { penalty: humPenalty, relief: windRelief } = humidityPenalty(actualTemp, hum, wind);
   if (windRelief > 1) {
-    factors.push({ label: "Wind Cooling Relief", impact: Math.round(windRelief) });
+    // Informational only — relief is already baked into the reduced penalty
+    factors.push({ label: "Wind Cooling Relief", impact: 0 });
   }
   if (humPenalty > 3) {
     score -= humPenalty;
@@ -176,29 +198,29 @@ export const calculateMoodScore = (apiData: any) => {
     if (sunHarshness > 40) {
       const glarePenalty = (sunHarshness - 40) * 0.55;
       // Reduce glare penalty when it's cold (winter sun is welcome)
-      const tempFactor = temp < 15 ? 0.3 : temp < 20 ? 0.7 : 1.0;
+      const tempFactor = actualTemp < 15 ? 0.3 : actualTemp < 20 ? 0.7 : 1.0;
       const applied = glarePenalty * tempFactor;
       score -= applied;
       factors.push({ label: "Solar Intensity", impact: -Math.round(applied) });
     }
 
     // Pleasant winter sun: cold day + moderate sun = mood boost
-    if (temp < 15 && sunHarshness > 25 && sunHarshness < 65) {
+    if (actualTemp < 15 && sunHarshness > 25 && sunHarshness < 65) {
       const sunBonus = Math.min(uv * 1.8, 10);
       score += sunBonus;
       factors.push({ label: "Pleasant Winter Sun", impact: Math.round(sunBonus) });
     }
 
     // Tropical wall: extreme sun + high humidity + warm
-    if (sunHarshness > 70 && hum > 70 && temp > 16) {
+    if (sunHarshness > 70 && hum > 70 && actualTemp > 16) {
       const synergyPenalty = 15;
       score -= synergyPenalty;
       factors.push({ label: "Tropical Intensity", impact: -synergyPenalty });
     }
   }
 
-  // 5. WIND COMFORT
-  const windImpact = windComfort(temp, wind);
+  // 5. WIND COMFORT (uses actual temp)
+  const windImpact = windComfort(actualTemp, wind);
   if (windImpact !== 0) {
     score += windImpact;
     factors.push({
@@ -207,28 +229,35 @@ export const calculateMoodScore = (apiData: any) => {
     });
   }
 
-  // 6. PRECIPITATION
-  const precipFx = precipitationImpact(precipitation, temp, cloud);
+  // 6. PRECIPITATION (uses actual temp)
+  const precipFx = precipitationImpact(precipitation, actualTemp, cloud);
   if (precipFx.impact !== 0) {
     score += precipFx.impact;
     factors.push({ label: precipFx.label, impact: precipFx.impact });
   }
 
-  // 7. PRESSURE & ATMOSPHERIC STABILITY
-  const pressureFx = pressureImpact(pressure, cloud, temp);
+  // 7. PRESSURE & ATMOSPHERIC STABILITY (uses actual temp)
+  const pressureFx = pressureImpact(pressure, cloud, actualTemp);
   score += pressureFx.impact;
   factors.push({ label: pressureFx.label, impact: pressureFx.impact });
 
-  // 8. WINTER CRISP BONUS
-  if (temp < 16 && isDay && sunHarshness < 50 && hum < 75 && wind < 20) {
+  // 8. WARM-NIGHT PRESSURE STAGNATION
+  if (isDay === 0 && pressure > 1018 && actualTemp > 23) {
+    const stagnationPenalty = Math.min((pressure - 1018) * 1.2, 8);
+    score -= stagnationPenalty;
+    factors.push({ label: "Warm Night Stagnation", impact: -Math.round(stagnationPenalty) });
+  }
+
+  // 9. WINTER CRISP BONUS (uses actual temp)
+  if (actualTemp < 16 && isDay && sunHarshness < 50 && hum < 75 && wind < 20) {
     score += 4;
     factors.push({ label: "Crisp Winter Air", impact: 4 });
   }
 
-  // 9. NIGHT MODE ADJUSTMENTS
+  // 10. NIGHT MODE ADJUSTMENTS (uses actual temp)
   if (isDay === 0) {
     // Remove harshness of UV at night (already excluded above), but add night calm if pleasant
-    if (temp >= 18 && temp <= 24 && hum < 70 && wind < 15 && precipitation < 1) {
+    if (actualTemp >= 18 && actualTemp <= 24 && hum < 70 && wind < 15 && precipitation < 1) {
       score += 3;
       factors.push({ label: "Pleasant Evening", impact: 3 });
     }

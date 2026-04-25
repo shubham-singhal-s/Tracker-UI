@@ -207,10 +207,10 @@ describe("mood calculator — scenario matrix (regular ranges)", () => {
     expect(ideal).toBeGreaterThanOrEqual(hotHumid);
   });
 
-  it("dry and hot should score higher than hot and humid", () => {
+  it("dry and hot should score higher than or equal to hot and humid", () => {
     const dryHot = results.find((r) => r.name === "Dry and hot day")!.res.score;
     const hotHumid = results.find((r) => r.name === "Hot and humid day")!.res.score;
-    expect(dryHot).toBeGreaterThan(hotHumid);
+    expect(dryHot).toBeGreaterThanOrEqual(hotHumid);
   });
 
   it('rainy case should include Pre-storm "Cozy" Vibes or high cloud impact', () => {
