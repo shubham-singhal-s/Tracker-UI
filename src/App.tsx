@@ -16,6 +16,11 @@ const App = () => {
 
   return (
     <div className="w-full h-full">
+      <Accordion type="single" className="bg-zinc-900" collapsible value={notify ? "item-day" : undefined}>
+        <DayAccordion />
+        <EpicAccordion />
+        <DealsAccordion hideOld={hideOld} />
+      </Accordion>
       <Accordion type="single" className="bg-black" collapsible>
         <AccordionItem value="menu">
           <AccordionTrigger className="flex-initial m-auto cursor-pointer" style={{ fontWeight: 600 }}>
@@ -36,11 +41,6 @@ const App = () => {
             <Saver />
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
-      <Accordion type="single" className="bg-zinc-900" collapsible value={notify ? "item-day" : undefined}>
-        <DayAccordion />
-        <EpicAccordion />
-        <DealsAccordion hideOld={hideOld} />
       </Accordion>
     </div>
   );

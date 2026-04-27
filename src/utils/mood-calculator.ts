@@ -217,6 +217,15 @@ export const calculateMoodScore = (apiData: any) => {
       score -= synergyPenalty;
       factors.push({ label: "Tropical Intensity", impact: -synergyPenalty });
     }
+
+    // Unrelenting Sun: clear sky + warm temps = no escape from direct sun
+    if (cloud < 15 && actualTemp >= 23 && sunHarshness > 50) {
+      const base = (sunHarshness - 60) * 0.3;
+      const tempMult = 1 + (actualTemp - 23) * 0.15;
+      const penalty = base * tempMult;
+      score -= penalty;
+      factors.push({ label: "Unrelenting Sun", impact: -Math.round(penalty) });
+    }
   }
 
   // 5. WIND COMFORT (uses actual temp)

@@ -125,7 +125,7 @@ describe("Mood Calculator - Scenario Ranges", () => {
     {
       name: "Sunny hot coastal",
       api: makeApi(30, { humidity: 60, uv: 8, radiation: 30, cloud: 5, wind: 4, pressure: 1010 }),
-      min: 0,
+      min: -20,
       max: 40,
     },
     {
