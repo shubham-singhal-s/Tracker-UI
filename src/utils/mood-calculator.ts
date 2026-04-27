@@ -45,8 +45,9 @@ function calculateSunHarshness(uv: number, radiation: number, cloud: number): nu
 
 function dewPointDepressionScore(temp: number, rh: number): number {
   // Plan formula: Td = temp - (100 - rh)/5; DPD = temp - Td = (100 - rh)/5
+
   const dpd = (100 - rh) / 5;
-  if (dpd >= 4) return 0;
+  if (dpd >= 4) return 0 * temp;
   return (4 - dpd) * 4;
 }
 
