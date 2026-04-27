@@ -8,7 +8,6 @@ on:
       - "README.md"
       - ".gitignore"
       - "docs/**"
-      - "scripts/**"
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,6 +19,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Run mood scenarios
+        run: npx tsx scripts/run-mood-scenarios.ts --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Build project
         run: npm run build
