@@ -1,134 +1,135 @@
 export const CITIES = ["Martin Place", "Castle Hill", "Kellyville", "Vasundhara"];
 
-const sigmoid = (x: number, k: number, x0: number) => 1 / (1 + Math.exp(-k * (x - x0)));
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
-/* ------------------------------------------------------------------ */
-/*  Temperature Comfort — Gaussian plateau 19–25°C with asymmetric σ  */
-/*  Cooler side is more tolerable than heat in NSW                    */
-/* ------------------------------------------------------------------ */
-function temperatureComfortScore(temp: number): number {
-  const COMFORT_MIN = 19;
-  const COMFORT_MAX = 25;
-  const SD_COLD = 8;
-  const SD_HOT = 5.5;
+function getMonth(daily: any): number {
+  const t = daily?.time?.[0];
+  if (!t) return new Date().getMonth() + 1;
+  return new Date(t).getMonth() + 1;
+}
 
-  if (temp >= COMFORT_MIN && temp <= COMFORT_MAX) return 100;
+function seasonalShift(month: number): number {
+  // NSW seasons: summer Dec-Feb, winter Jun-Aug
+  if ([12, 1, 2].includes(month)) return 1.5;
+  if ([6, 7, 8].includes(month)) return -1.5;
+  return 0;
+}
 
-  if (temp < COMFORT_MIN) {
-    return 100 * Math.exp(-0.5 * Math.pow((COMFORT_MIN - temp) / SD_COLD, 2));
+function temperatureComfortScore(temp: number, month: number): number {
+  const shift = seasonalShift(month);
+  const center = 22 + shift;
+  const min = center - 3;
+  const max = center + 3;
+  const sdCold = 8;
+  const sdHot = 5.5;
+
+  if (temp >= min && temp <= max) return 100;
+
+  if (temp < min) {
+    return 100 * Math.exp(-0.5 * Math.pow((min - temp) / sdCold, 2));
   }
-  return 100 * Math.exp(-0.5 * Math.pow((temp - COMFORT_MAX) / SD_HOT, 2));
+  return 100 * Math.exp(-0.5 * Math.pow((temp - max) / sdHot, 2));
 }
 
-/* ------------------------------------------------------------------ */
-/*  UV Stress — exponential curve because NSW UV regularly hits 11+   */
-/* ------------------------------------------------------------------ */
 function uvStressScore(uv: number): number {
-  // Exponential penalty: negligible at UV 0–4, ramps up 6+, extreme at 10+
-  return Math.pow(uv / 5, 2.4) * 7;
+  return 30 / (1 + Math.exp(-0.9 * (uv - 6)));
 }
 
-/* ------------------------------------------------------------------ */
-/*  Sun Harshness — standalone metric for glare / thermal load        */
-/*  radiation is in MJ/m² (Open-Meteo daily sum)                      */
-/* ------------------------------------------------------------------ */
 function calculateSunHarshness(uv: number, radiation: number, cloud: number): number {
-  const radNorm = clamp(radiation / 32, 0, 1.1); // 0–35 MJ/m² typical daily range
-  const uvNorm = uv / 12; // 12 is extreme
-  const skyClarity = 0.85 + ((100 - cloud) / 100) * 0.45; // 0.85–1.30
+  const radNorm = clamp(radiation / 32, 0, 1.1);
+  const uvNorm = uv / 12;
+  const skyClarity = 0.85 + ((100 - cloud) / 100) * 0.45;
   const raw = (uvNorm * 0.65 + radNorm * 0.35) * skyClarity;
   return clamp(raw * 100, 0, 100);
 }
 
-/* ------------------------------------------------------------------ */
-/*  Humidity Penalty — context-aware by temperature                   */
-/*  NSW coastal baseline 60–70%; penalty only kicks in meaningfully   */
-/*  above ~26 °C where mugginess is genuinely uncomfortable.          */
-/* ------------------------------------------------------------------ */
-function humidityPenalty(temp: number, hum: number, wind: number): { penalty: number; relief: number } {
-  const humidityWeight = sigmoid(temp, 0.35, 26); // ramps up around 26°C
-  const basePenalty = humidityWeight * Math.max(0, hum - 65) * 1.2;
-
-  let relief = 0;
-  if (temp > 18 && temp < 30 && wind > 12 && basePenalty > 2) {
-    relief = Math.min(basePenalty * 0.5, (wind - 12) * 1.5);
-  }
-
-  return { penalty: Math.max(0, basePenalty - relief), relief };
+function dewPointDepressionScore(temp: number, rh: number): number {
+  // Plan formula: Td = temp - (100 - rh)/5; DPD = temp - Td = (100 - rh)/5
+  const dpd = (100 - rh) / 5;
+  if (dpd >= 4) return 0;
+  return (4 - dpd) * 4;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Wind Comfort — context-sensitive (wind in km/h)                   */
-/* ------------------------------------------------------------------ */
+function heatIndexScore(temp: number, rh: number): number {
+  if (temp <= 26) return 0;
+  const deviation = Math.max(0, ((temp - 26) * (rh - 50)) / 20);
+  return deviation * 2;
+}
+
 function windComfort(temp: number, wind: number): number {
   if (wind >= 5 && wind <= 15) {
-    if (temp > 26) return 3; // welcome breeze when hot
+    if (temp > 26) return 3;
     return 0;
   }
-
-  if (wind < 3 && temp > 24) return -2; // stuffy
-
+  if (wind < 3 && temp > 24) return -2;
   if (wind > 25) {
     if (temp < 15) return -8;
     if (temp < 20) return -5;
     return -3;
   }
-
   if (wind > 18) {
     if (temp < 15) return -4;
     return -1;
   }
-
   return 0;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Pressure & Atmospheric Stability                                  */
-/* ------------------------------------------------------------------ */
-function pressureImpact(pressure: number, cloud: number, temp: number): { impact: number; label: string } {
-  if (pressure < 1008 && cloud > 60 && temp > 12 && temp < 22) {
+function weatherCodeImpact(code: number, temp: number): { impact: number; label: string } {
+  if (code == null) return { impact: 0, label: "" };
+  if ([45, 48].includes(code)) return { impact: -3, label: "Fog" };
+  if ([51, 53, 55].includes(code) && temp > 10) return { impact: 2, label: "Gentle Drizzle" };
+  if ([95, 96, 99].includes(code)) return { impact: -12, label: "Thunderstorm" };
+  if ([65, 82].includes(code)) return { impact: -16, label: "Heavy Rain" };
+  return { impact: 0, label: "" };
+}
+
+function seasonalAdaptation(month: number, temp: number): number {
+  const isSummer = [12, 1, 2].includes(month);
+  const isWinter = [6, 7, 8].includes(month);
+  const ideal = isSummer ? 27 : isWinter ? 17 : 22;
+  return 5 * Math.exp(-0.5 * Math.pow((temp - ideal) / 5, 2));
+}
+
+function precipitationImpact(
+  currentPrecip: number,
+  dailyPrecip: number,
+  temp: number,
+  cloud: number,
+): { impact: number; label: string } {
+  const precip = (currentPrecip ?? 0) * 0.3 + (dailyPrecip ?? 0) * 0.7;
+  if (precip <= 0) return { impact: 0, label: "" };
+  if (precip < 2 && temp > 15 && temp < 24 && cloud > 50) {
+    return { impact: 4, label: "Gentle Rain Coziness" };
+  }
+  if (precip < 8) return { impact: -4, label: "Rain Inconvenience" };
+  if (precip < 20) return { impact: -10, label: "Heavy Rain Disruption" };
+  return { impact: -16, label: "Torrential Rain" };
+}
+
+function pressureImpact(
+  pressure: number,
+  cloud: number,
+  temp: number,
+  isRaining: boolean,
+): { impact: number; label: string } {
+  if (pressure < 1008 && cloud > 60 && temp > 12 && temp < 22 && !isRaining) {
     return { impact: 6, label: 'Pre-storm "Cozy" Vibes' };
   }
-
   let impact = (pressure - 1013) * 0.4;
-  if (pressure > 1020 && temp > 28) impact -= 3; // oppressive heat under strong high
-
+  if (pressure > 1020 && temp > 28) impact -= 3;
   impact = clamp(impact, -6, 6);
   const label = impact > 1 ? "Stable Atmosphere" : impact < -2 ? "Low Pressure Heaviness" : "Atmospheric Stability";
   return { impact: Math.round(impact), label };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Precipitation — context aware                                     */
-/* ------------------------------------------------------------------ */
-function precipitationImpact(precipMm: number, temp: number, cloud: number): { impact: number; label: string } {
-  if (!precipMm || precipMm <= 0) return { impact: 0, label: "" };
-
-  if (precipMm < 2 && temp > 15 && temp < 24 && cloud > 50) {
-    return { impact: 4, label: "Gentle Rain Coziness" };
-  }
-
-  if (precipMm < 8) return { impact: -4, label: "Rain Inconvenience" };
-  if (precipMm < 20) return { impact: -10, label: "Heavy Rain Disruption" };
-  return { impact: -16, label: "Torrential Rain" };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Apparent vs Actual Temp Delta — soft-capped log taper             */
-/* ------------------------------------------------------------------ */
 function apparentDeltaImpact(actual: number, apparent: number): { impact: number; label: string } {
   const delta = apparent - actual;
-
-  // Positive delta = feels hotter (mugginess / heat index)
   if (delta > 2) {
     const raw = delta * 1.5;
-    const capped = Math.min(raw, 15); // soft cap at -15
+    const capped = Math.min(raw, 15);
     const impact = -Math.round(capped);
     return { impact, label: delta > 4 ? "Heat Index Stress" : "Feels Warmer" };
   }
-
-  // Negative delta = feels colder (wind chill)
   if (delta < -4) {
     const raw = Math.abs(delta) * 1.2;
     const capped = Math.min(raw, 15);
@@ -137,142 +138,171 @@ function apparentDeltaImpact(actual: number, apparent: number): { impact: number
   if (delta < -2) {
     return { impact: -2, label: "Cool Breeze Effect" };
   }
-
   return { impact: 0, label: "" };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Main Entrypoint                                                   */
-/*  CRITICAL: actualTemp (temperature_2m) drives all comfort curves;  */
-/*  apparent_temperature is reserved solely for the delta calculation */
-/* ------------------------------------------------------------------ */
+function checkSynergies(
+  temp: number,
+  hum: number,
+  wind: number,
+  uv: number,
+  cloud: number,
+  isDay: number,
+  precip: number,
+  pressure: number,
+): Array<{ label: string; impact: number }> {
+  const out: Array<{ label: string; impact: number }> = [];
+
+  if (temp > 28 && hum > 70) {
+    out.push({ label: "Heat Index Stress", impact: -8 });
+  }
+  if (uv > 10 && temp > 30 && cloud < 10) {
+    out.push({ label: "Unrelenting Sun", impact: -10 });
+  }
+  if (temp < 12 && wind > 25) {
+    out.push({ label: "Exposed Chill", impact: -6 });
+  }
+  if (isDay === 0 && temp >= 18 && temp <= 24 && wind < 10 && precip < 1) {
+    out.push({ label: "Pleasant Evening", impact: 3 });
+  }
+  if (precip > 0 && temp >= 15 && temp <= 22 && cloud > 80 && pressure < 1006) {
+    out.push({ label: "Cozy Rain", impact: 4 });
+  }
+
+  return out;
+}
+
 export const calculateMoodScore = (apiData: any) => {
   const { current, daily } = apiData;
+  const month = getMonth(daily);
+
   const apparentTemp = current.apparent_temperature;
   const actualTemp = current.temperature_2m ?? apparentTemp;
   const hum = current.relative_humidity_2m;
   const uv = daily.uv_index_max?.[0] ?? 0;
-  const radiation = daily.shortwave_radiation_sum?.[0] ?? 0; // MJ/m²
+  const radiation = daily.shortwave_radiation_sum?.[0] ?? 0;
   const cloud = current.cloud_cover ?? 0;
   const isDay = current.is_day;
-  const wind = current.wind_speed_10m; // km/h
+  const wind = current.wind_speed_10m;
   const pressure = current.pressure_msl;
-  const precipitation = current.precipitation ?? daily.precipitation_sum?.[0] ?? 0;
+  const currentPrecip = current.precipitation ?? 0;
+  const dailyPrecip = daily.precipitation_sum?.[0] ?? 0;
+  const weatherCode = current.weather_code;
 
   const factors: any[] = [];
+  let score = 0;
 
-  // 1. BASE TEMPERATURE COMFORT (uses actual temp to avoid double-counting)
-  let score = temperatureComfortScore(actualTemp);
-  factors.push({ label: "Temperature Comfort", impact: Math.round(score) });
+  // 1. Temperature comfort
+  const tempComfort = temperatureComfortScore(actualTemp, month);
+  score += tempComfort;
+  factors.push({ label: "Temperature Comfort", impact: Math.round(tempComfort) });
 
-  // 2. APPARENT TEMP DELTA (mugginess or wind chill)
+  // 2. Apparent delta
   const deltaFx = apparentDeltaImpact(actualTemp, apparentTemp);
   if (deltaFx.impact !== 0) {
     score += deltaFx.impact;
     factors.push({ label: deltaFx.label, impact: deltaFx.impact });
   }
 
-  // 3. HUMIDITY & MUGGINESS (uses actual temp)
-  const { penalty: humPenalty, relief: windRelief } = humidityPenalty(actualTemp, hum, wind);
-  if (windRelief > 1) {
-    // Informational only — relief is already baked into the reduced penalty
-    factors.push({ label: "Wind Cooling Relief", impact: 0 });
-  }
-  if (humPenalty > 3) {
-    score -= humPenalty;
-    factors.push({ label: "Muggy/Sticky Air", impact: -Math.round(humPenalty) });
+  // 3. Dew point depression
+  const dpdPenalty = dewPointDepressionScore(actualTemp, hum);
+  if (dpdPenalty > 0) {
+    score -= dpdPenalty;
+    factors.push({ label: "Muggy Air", impact: -Math.round(dpdPenalty) });
   }
 
-  // 4. SUN HARSHNESS (daytime only)
+  // 4. Heat index
+  const hiPenalty = heatIndexScore(actualTemp, hum);
+  if (hiPenalty > 0) {
+    score -= hiPenalty;
+    factors.push({ label: "Heat Index Stress", impact: -Math.round(hiPenalty) });
+  }
+
+  // 5. Sun harshness
   const sunHarshness = calculateSunHarshness(uv, radiation, cloud);
 
   if (isDay === 1) {
-    // UV stress: exponential curve because NSW UV regularly hits 11+
     const uvStress = uvStressScore(uv);
-    if (uvStress > 5) {
+    if (uvStress > 2) {
       score -= uvStress;
       factors.push({ label: "UV Stress", impact: -Math.round(uvStress) });
     }
 
-    // Glare / solar intensity
     if (sunHarshness > 40) {
-      const glarePenalty = (sunHarshness - 40) * 0.55;
-      // Reduce glare penalty when it's cold (winter sun is welcome)
       const tempFactor = actualTemp < 15 ? 0.3 : actualTemp < 20 ? 0.7 : 1.0;
-      const applied = glarePenalty * tempFactor;
-      score -= applied;
-      factors.push({ label: "Solar Intensity", impact: -Math.round(applied) });
+      const glarePenalty = ((sunHarshness - 40) / 60) * 25 * tempFactor;
+      score -= glarePenalty;
+      factors.push({ label: "Solar Intensity", impact: -Math.round(glarePenalty) });
     }
 
-    // Pleasant winter sun: cold day + moderate sun = mood boost
     if (actualTemp < 15 && sunHarshness > 25 && sunHarshness < 65) {
       const sunBonus = Math.min(uv * 1.8, 10);
       score += sunBonus;
       factors.push({ label: "Pleasant Winter Sun", impact: Math.round(sunBonus) });
     }
-
-    // Tropical wall: extreme sun + high humidity + warm
-    if (sunHarshness > 70 && hum > 70 && actualTemp > 16) {
-      const synergyPenalty = 15;
-      score -= synergyPenalty;
-      factors.push({ label: "Tropical Intensity", impact: -synergyPenalty });
-    }
-
-    // Unrelenting Sun: clear sky + warm temps = no escape from direct sun
-    if (cloud < 15 && actualTemp >= 23 && sunHarshness > 50) {
-      const base = (sunHarshness - 60) * 0.3;
-      const tempMult = 1 + (actualTemp - 23) * 0.15;
-      const penalty = base * tempMult;
-      score -= penalty;
-      factors.push({ label: "Unrelenting Sun", impact: -Math.round(penalty) });
-    }
   }
 
-  // 5. WIND COMFORT (uses actual temp)
+  // 6. Wind
   const windImpact = windComfort(actualTemp, wind);
   if (windImpact !== 0) {
     score += windImpact;
-    factors.push({
-      label: windImpact > 0 ? "Pleasant Breeze" : "Uncomfortable Wind",
-      impact: windImpact,
-    });
+    factors.push({ label: windImpact > 0 ? "Pleasant Breeze" : "Uncomfortable Wind", impact: windImpact });
   }
 
-  // 6. PRECIPITATION (uses actual temp)
-  const precipFx = precipitationImpact(precipitation, actualTemp, cloud);
+  // 7. Weather code
+  const codeFx = weatherCodeImpact(weatherCode, actualTemp);
+  if (codeFx.impact !== 0) {
+    score += codeFx.impact;
+    factors.push({ label: codeFx.label, impact: codeFx.impact });
+  }
+
+  // 8. Precipitation
+  const precipFx = precipitationImpact(currentPrecip, dailyPrecip, actualTemp, cloud);
   if (precipFx.impact !== 0) {
     score += precipFx.impact;
     factors.push({ label: precipFx.label, impact: precipFx.impact });
   }
 
-  // 7. PRESSURE & ATMOSPHERIC STABILITY (uses actual temp)
-  const pressureFx = pressureImpact(pressure, cloud, actualTemp);
+  // 9. Pressure
+  const isRaining = (currentPrecip ?? 0) > 2 || (dailyPrecip ?? 0) > 5;
+  const pressureFx = pressureImpact(pressure, cloud, actualTemp, isRaining);
   score += pressureFx.impact;
   factors.push({ label: pressureFx.label, impact: pressureFx.impact });
 
-  // 8. WARM-NIGHT PRESSURE STAGNATION
-  if (isDay === 0 && pressure > 1018 && actualTemp > 23) {
-    const stagnationPenalty = Math.min((pressure - 1018) * 1.2, 8);
-    score -= stagnationPenalty;
-    factors.push({ label: "Warm Night Stagnation", impact: -Math.round(stagnationPenalty) });
+  // 10. Synergies
+  const synergies = checkSynergies(actualTemp, hum, wind, uv, cloud, isDay, currentPrecip, pressure);
+  for (const s of synergies) {
+    score += s.impact;
+    factors.push({ label: s.label, impact: s.impact });
   }
 
-  // 9. WINTER CRISP BONUS (uses actual temp)
-  if (actualTemp < 16 && isDay && sunHarshness < 50 && hum < 75 && wind < 20) {
+  // 11. Seasonal adaptation
+  const seasonalBonus = seasonalAdaptation(month, actualTemp);
+  if (seasonalBonus > 1) {
+    score += seasonalBonus;
+    factors.push({ label: "Seasonal Adaptation", impact: Math.round(seasonalBonus) });
+  }
+
+  // 12. Winter crisp
+  if (actualTemp < 16 && isDay === 1 && sunHarshness < 50 && hum < 75 && wind < 20) {
     score += 4;
     factors.push({ label: "Crisp Winter Air", impact: 4 });
   }
 
-  // 10. NIGHT MODE ADJUSTMENTS (uses actual temp)
+  // 13. Night mode extras
   if (isDay === 0) {
-    // Remove harshness of UV at night (already excluded above), but add night calm if pleasant
-    if (actualTemp >= 18 && actualTemp <= 24 && hum < 70 && wind < 15 && precipitation < 1) {
-      score += 3;
-      factors.push({ label: "Pleasant Evening", impact: 3 });
+    if (cloud < 20 && currentPrecip < 1 && wind < 10) {
+      score += 2;
+      factors.push({ label: "Clear Night Calm", impact: 2 });
+    }
+    if (pressure > 1018 && actualTemp > 23) {
+      const stagnation = Math.min((pressure - 1018) * 1.2, 8);
+      score -= stagnation;
+      factors.push({ label: "Warm Night Stagnation", impact: -Math.round(stagnation) });
     }
   }
 
-  const finalScore = Math.min(120, Math.max(-20, Math.round(score)));
+  const finalScore = clamp(Math.round(score), -20, 120);
 
   return { score: finalScore, factors, sunHarshness: Math.round(sunHarshness) };
 };

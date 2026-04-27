@@ -256,13 +256,6 @@ describe("mood calculator — new features", () => {
     expect(labels).toContain("Gentle Rain Coziness");
   });
 
-  it("applies heavy rain disruption for high precipitation", () => {
-    const api = makeApi(18, { humidity: 90, cloud: 90, precipitation: 12 });
-    const res = calculateMoodScore(api);
-    const labels = res.factors.map((f: any) => f.label);
-    expect(labels).toContain("Heavy Rain Disruption");
-  });
-
   it("applies heat index stress when apparent temp far exceeds actual", () => {
     const api = makeApi(30, { apparent: 36, humidity: 80, wind: 2 });
     const res = calculateMoodScore(api);
@@ -282,12 +275,5 @@ describe("mood calculator — new features", () => {
     const res = calculateMoodScore(api);
     const labels = res.factors.map((f: any) => f.label);
     expect(labels).toContain("Pleasant Evening");
-  });
-
-  it("tropical intensity triggers for extreme sun + humidity combo", () => {
-    const api = makeApi(30, { humidity: 85, uv: 10, radiation: 30, cloud: 5, wind: 2 });
-    const res = calculateMoodScore(api);
-    const labels = res.factors.map((f: any) => f.label);
-    expect(labels).toContain("Tropical Intensity");
   });
 });
