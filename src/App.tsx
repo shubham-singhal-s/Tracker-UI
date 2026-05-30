@@ -1,8 +1,9 @@
-import { Eye, EyeClosed, Settings2, Zap } from "lucide-react";
-import { useState, useTransition } from "react";
+import { ArrowUp, Eye, EyeClosed, Settings2, Zap } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import "./App.css";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Toggle } from "./components/ui/toggle";
+import { cn } from "./lib/utils";
 import { DayAccordion } from "./views/accordions/day-accordion";
 import { DealsAccordion } from "./views/accordions/deals-accordion";
 import { EpicAccordion } from "./views/accordions/epic-accordion";
@@ -16,6 +17,27 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   month: "short",
 });
 
+const useHasScrolled = (threshold = 200) => {
+  const [scrolled, setScrolled] = useState(false);
+  const thresholdRef = useRef(threshold);
+
+  useEffect(() => {
+    thresholdRef.current = threshold;
+  }, [threshold]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const next = window.scrollY > thresholdRef.current;
+      setScrolled((prev) => (prev !== next ? next : prev));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return scrolled;
+};
+
 const App = () => {
   const [hideOld, setHideOld] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -27,6 +49,11 @@ const App = () => {
   };
 
   const today = dateFormatter.format(new Date());
+  const visible = useHasScrolled(200);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -53,6 +80,17 @@ const App = () => {
           <DealsAccordion hideOld={hideOld} />
         </Accordion>
       </main>
+
+      <button
+        type="button"
+        onClick={scrollToTop}
+        className={cn(
+          "fixed bottom-14 right-2 z-50 bg-primary text-primary-foreground p-4 rounded-full shadow-lg hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-300 ease-in-out",
+          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
+      >
+        <ArrowUp size={16} />
+      </button>
 
       <section className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/90 shadow-[0_-4px_20px_rgba(0,0,0,0.25)] backdrop-blur-md">
         <Accordion type="single" collapsible className="mx-auto max-w-7xl">

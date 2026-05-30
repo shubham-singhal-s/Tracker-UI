@@ -89,16 +89,18 @@ export const Ozb: FC<OzbProps> = ({ deal, hideOld = true }) => {
               <DealCard key={dealItem.url} deal={dealItem} />
             ))}
           </div>
-          <Button
-            onClick={handleRemove}
-            variant="destructive"
-            size="sm"
-            className="mt-4 h-10"
-            aria-label={`Remove ${deal}`}
-          >
-            <Trash2 size={14} className="mr-1.5" />
-            Remove
-          </Button>
+          <div className="w-full text-center">
+            <Button
+              onClick={handleRemove}
+              variant="destructive"
+              size="sm"
+              className="mt-4 h-10"
+              aria-label={`Remove ${deal}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              Remove
+            </Button>
+          </div>
         </div>
       </AccordionContent>
     </AccordionItem>

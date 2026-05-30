@@ -103,7 +103,7 @@ export const MyDay: FC = () => {
           return (
             <Card
               key={`weather-${w?.latitude}-${w?.longitude}-${w?.elevation}`}
-              className="relative overflow-hidden min-h-80 text-white py-0 w-70"
+              className="relative overflow-hidden min-h-80 text-white py-0 w-full"
             >
               <div
                 className="absolute inset-0 z-0"
