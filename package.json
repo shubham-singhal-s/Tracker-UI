@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development vite",
+    "local": "VITE_IS_LOCAL=true vite",
     "prebuild": "npm run test",
     "build": "VITE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) sh -c \"tsc -b && vite build\"",
     "postbuild": "echo 'Build complete.' && find ./dist -name '*.js' -exec du -ch {} + | grep total",
@@ -25,7 +26,6 @@
     "clsx": "^2.1.1",
     "jsencrypt": "^3.5.4",
     "lucide-react": "^0.556.0",
-    "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -35,7 +35,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@tanstack/router-plugin": "^1.157.17",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

@@ -118,3 +118,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* View Transitions for accordion sections */
+@supports (view-transition-name: none) {
+  ::view-transition-old(section),
+  ::view-transition-new(section) {
+    animation-duration: 200ms;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @supports (view-transition-name: none) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+}

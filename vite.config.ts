@@ -18,14 +18,13 @@ export default defineConfig({
     },
   },
   build: {
-    target: "es2022",
+    target: "es2023",
     cssCodeSplit: true,
     sourcemap: false,
     minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks: {
-          "react-core": ["react", "react-dom"],
           "query-router": ["@tanstack/react-query", "@tanstack/react-router"],
           "ui-libs": [
             "lucide-react",

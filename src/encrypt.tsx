@@ -34,12 +34,13 @@ export default function Encrypt() {
       </Button>
       {encrypted && <h6 className="text-sm">Result (click to copy)</h6>}
       {encrypted && (
-        <div
+        <button
+          type="button"
           onClick={copyToClipboard}
-          className="text-xs text-zinc-500 max-w-sm p-2 border border-gray-300 wrap-break-words cursor-pointer"
+          className="text-xs text-zinc-500 max-w-sm p-2 border border-gray-300 wrap-break-words cursor-pointer text-left"
         >
           {encrypted}
-        </div>
+        </button>
       )}
     </div>
   );

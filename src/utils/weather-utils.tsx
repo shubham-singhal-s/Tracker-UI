@@ -98,7 +98,7 @@ export const calculateSunIntensity = (w: any) => {
 
   // 3. Normalise against a 'Max NSW Day' (approx 60-70 units)
   const maxDayReference = 65;
-  let percentage = (rawIntensity / maxDayReference) * skyClarityMultiplier * 100;
+  const percentage = (rawIntensity / maxDayReference) * skyClarityMultiplier * 100;
 
   return getFormatted(Math.min(100, Math.max(0, Math.round(percentage))), "%", 70, 35);
 };

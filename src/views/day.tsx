@@ -4,7 +4,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { CITIES } from "@/utils/mood-calculator";
 import { calculateSunIntensity, getCurrentUnit, getDailyUnit, getTime, getWeatherImage } from "@/utils/weather-utils";
-import { useSearch } from "@tanstack/react-router";
 import {
   ArrowBigRight,
   ChevronsUpDown,
@@ -13,165 +12,160 @@ import {
   Droplet,
   Frown,
   Gauge,
-  Loader2,
   Radiation,
   Sunset,
   Thermometer,
   Wind,
 } from "lucide-react";
-import { useEffect, type FC } from "react";
+import type { FC } from "react";
+import { SkeletonWeather } from "./skeleton-weather";
+
+interface MoodFactor {
+  label: string;
+  impact: number;
+}
+
+interface MoodScoreProps {
+  score: {
+    score: number;
+    color: string;
+    Icon: React.ElementType;
+    factors?: MoodFactor[];
+  } | null;
+}
+
+const MoodScore: FC<MoodScoreProps> = ({ score }) => {
+  if (!score) return null;
+  const { score: scoreValue, color, Icon, factors } = score;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-2">
+        <Icon className={color} size={20} />
+        <span className={cn("font-bold text-white text-lg", color)}>{scoreValue?.toFixed(0)}%</span>
+      </div>
+      {factors && factors.length > 0 && (
+        <div className="relative">
+          <Collapsible>
+            <CollapsibleTrigger className="inline-flex items-center gap-1 text-xs text-white/80 hover:text-white transition-colors">
+              Mood killers <ChevronsUpDown size={14} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="absolute left-1/2 -translate-x-1/2 top-full z-20 mt-1 w-56">
+              <div className="rounded-lg bg-black/80 backdrop-blur-md border border-white/10 p-3 space-y-1 shadow-xl">
+                {factors.map((f) => (
+                  <div key={f.label} className="flex justify-between text-xs">
+                    <span className="text-white/80">{f.label}</span>
+                    <span className={cn("font-bold", f.impact < 0 ? "text-red-400" : "text-green-400")}>
+                      {f.impact > 0 ? "+" : ""}
+                      {f.impact}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const MyDay: FC = () => {
   const { data, isLoading, isError } = useWeatherQuery();
-  const { notify } = useSearch({ strict: false });
-
-  useEffect(() => {
-    if (notify && data?.length) {
-      navigator.serviceWorker.ready.then((r) => {
-        r.showNotification("Today's Weather Mood", {
-          body: CITIES.map((city, i) => {
-            if (i > 1) return null; // Only notify for the first two cities
-            const current = data[i];
-
-            return `${city}: ${current?.scoreValue?.toFixed(0)}% mood, ${current?.daily?.precipitation_sum?.[0]}mm rain, ${current?.current?.relative_humidity_2m}% humidity`;
-          })
-            .filter(Boolean)
-            .join("\n"),
-          icon: "/Sunny.webp",
-        });
-      });
-
-      const url = new URL(window.location.href);
-      url.searchParams.delete("notify");
-      window.history.replaceState(window.history.state, "", url.href);
-    }
-  }, [data, notify]);
-
-  const renderMoodScore = (score) => {
-    if (!score) return null;
-    const { score: scoreValue, color, Icon, factors } = score;
-
-    return (
-      <div>
-        <div className="flex w-full items-center justify-center gap-2 text-shadow-lg">
-          <Icon className={color} />
-          <span className={cn("text-white", "font-bold", color)}>{scoreValue?.toFixed(0)}%</span>
-        </div>
-        {factors?.length > 0 && (
-          <div>
-            <Collapsible>
-              <CollapsibleTrigger className="w-full flex flex-row justify-center items-center gap-1">
-                Mood killers <ChevronsUpDown size={16} />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="relative">
-                <div className="p-4 px-8 z-20 absolute rounded w-full bg-gray-700/80 text-white">
-                  {factors.map((f, i) => (
-                    <div key={i} className="flex flex-row justify-between text-sm">
-                      <span>{f.label}</span>
-                      <span className={cn("font-bold", f.impact < 0 ? "text-red-400" : "text-green-400")}>
-                        {f.impact > 0 ? "+" : ""}
-                        {f.impact}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   if (isLoading) {
-    return <Loader2 className="text-white m-auto animate-spin" size={48} />;
+    return (
+      <div className="p-4">
+        <SkeletonWeather count={3} />
+      </div>
+    );
   }
 
   if (isError) {
     return (
-      <div>
-        <Frown className="m-auto text-red-400" size={32} />
-        Something went wrong fetching the weather data.
+      <div className="p-8 text-center">
+        <Frown className="mx-auto text-red-400 mb-2" size={32} />
+        <p className="text-sm text-muted-foreground">Something went wrong fetching the weather data.</p>
       </div>
     );
   }
 
+  if (!data) {
+    return <div className="p-8 text-center text-sm text-muted-foreground">No weather data available.</div>;
+  }
+
   return (
-    <div>
-      {data ? (
-        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-center m-auto">
-          {data.map((w, i) => {
-            const weatherCode = w?.daily?.weather_code?.[0];
-            const bgImage = getWeatherImage(weatherCode);
-            return (
-              <Card
-                key={"weather-" + w?.latitude + w?.longitude + w?.elevation}
-                className="relative overflow-hidden text-shadow-lg"
-                style={{ minHeight: 320 }}
-              >
-                {/* Blurred and darkened background */}
-                <div
-                  className="absolute inset-0 z-0"
-                  style={{
-                    backgroundImage: `url(${bgImage})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    filter: "blur(3px) brightness(0.5)",
-                  }}
-                  aria-hidden="true"
-                />
-                {/* Card content */}
-                <div className="relative z-20 flex flex-col gap-2 h-full">
-                  <CardTitle className="text-white text-lg font-bold">{CITIES[i]}</CardTitle>
-                  <CardDescription>
-                    {renderMoodScore(w)}
-                    <div className="grid grid-cols-2 gap-2 px-4">
-                      <span className="align-middle mt-2">
-                        <Thermometer className="m-auto text-red-400" />
-                        <span className="line-through">{getCurrentUnit(w, "temperature_2m", 28, 15)}</span>
-                        <ArrowBigRight className="inline mx-1" size={16} />
+    <div className="p-3 sm:p-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {data.map((w, i) => {
+          const weatherCode = w?.daily?.weather_code?.[0];
+          const bgImage = getWeatherImage(weatherCode);
+          return (
+            <Card
+              key={`weather-${w?.latitude}-${w?.longitude}-${w?.elevation}`}
+              className="relative overflow-hidden min-h-80 text-white py-0"
+            >
+              <div
+                className="absolute inset-0 z-0"
+                style={{
+                  backgroundImage: `url(${bgImage})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "blur(4px) brightness(0.45)",
+                }}
+                aria-hidden="true"
+              />
+              <div className="relative z-10 flex flex-col gap-3 h-full p-4">
+                <CardTitle className="text-white text-lg font-bold drop-shadow text-center">{CITIES[i]}</CardTitle>
+                <CardDescription className="flex flex-col gap-3">
+                  <MoodScore score={w} />
+                  <div className="grid grid-cols-2 gap-2 px-1">
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Thermometer className="text-red-400" size={18} />
+                      <span className="text-sm">
+                        <span className="line-through opacity-60">{getCurrentUnit(w, "temperature_2m", 28, 15)}</span>
+                        <ArrowBigRight className="inline mx-0.5" size={14} />
                         {getCurrentUnit(w, "apparent_temperature", 28, 15)}
                       </span>
-                      <span className="align-middle mt-2">
-                        <CloudRain className="m-auto text-blue-400" />
-                        {getCurrentUnit(w, "precipitation", 30, 0, true)}
-                        {" / "}
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <CloudRain className="text-blue-400" size={18} />
+                      <span className="text-sm">
+                        {getCurrentUnit(w, "precipitation", 30, 0, true)} /{" "}
                         {getDailyUnit(w, "precipitation_sum", 50, 0, true)}
                       </span>
-                      <span className="align-middle mt-2">
-                        <Radiation className="m-auto text-yellow-400" />
-                        {calculateSunIntensity(w)}
-                      </span>
-                      <span>
-                        <CloudCheck className="m-auto text-gray-400" />
-                        {getCurrentUnit(w, "cloud_cover", undefined, undefined, true)}
-                      </span>
-                      <span>
-                        <Wind className="m-auto text-blue-100" />
-                        {getCurrentUnit(w, "wind_speed_10m", 25)}
-                      </span>
-                      <span>
-                        <Droplet className="m-auto text-blue-300" />
-                        {getCurrentUnit(w, "relative_humidity_2m", 70, 30)}
-                      </span>
-                      <span>
-                        <Gauge className="m-auto text-green-600" />
-                        {getCurrentUnit(w, "pressure_msl", 1022, 1007, true)}
-                      </span>
-                      <span className="text-white font-bold">
-                        <Sunset className="m-auto text-orange-400" />
-                        {getTime(w?.daily?.sunset?.[0])}
-                      </span>
-                    </div>
-                  </CardDescription>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <div>No data</div>
-      )}
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Radiation className="text-yellow-400" size={18} />
+                      <span className="text-sm">{calculateSunIntensity(w)}</span>
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <CloudCheck className="text-gray-300" size={18} />
+                      <span className="text-sm">{getCurrentUnit(w, "cloud_cover", undefined, undefined, true)}</span>
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Wind className="text-blue-200" size={18} />
+                      <span className="text-sm">{getCurrentUnit(w, "wind_speed_10m", 25)}</span>
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Droplet className="text-blue-300" size={18} />
+                      <span className="text-sm">{getCurrentUnit(w, "relative_humidity_2m", 70, 30)}</span>
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Gauge className="text-green-400" size={18} />
+                      <span className="text-sm">{getCurrentUnit(w, "pressure_msl", 1022, 1007, true)}</span>
+                    </span>
+                    <span className="flex flex-col items-center gap-1 text-center">
+                      <Sunset className="text-orange-400" size={18} />
+                      <span className="text-sm font-semibold">{getTime(w?.daily?.sunset?.[0])}</span>
+                    </span>
+                  </div>
+                </CardDescription>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };

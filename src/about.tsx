@@ -1,25 +1,26 @@
+const rawBuildTime = (import.meta as any).env?.VITE_BUILD_TIME as string | undefined;
+const isBuilt = Boolean(rawBuildTime);
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+});
+
+const formatDate = (d: Date) => {
+  const datePart = dateFormatter.format(d);
+  const timePart = timeFormatter.format(d);
+  return `${datePart} - ${timePart}`;
+};
+
 const About = () => {
-  const rawBuildTime = (import.meta as any).env?.VITE_BUILD_TIME as string | undefined;
-  const isBuilt = Boolean(rawBuildTime);
   const buildDate = isBuilt ? new Date(rawBuildTime as string) : new Date();
-
-  const formatDate = (d: Date, opts?: { timeZone?: string }) => {
-    const datePart = new Intl.DateTimeFormat("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: opts?.timeZone,
-    }).format(d);
-
-    const timePart = new Intl.DateTimeFormat("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-      timeZone: opts?.timeZone,
-    }).format(d);
-
-    return `${datePart} - ${timePart}`;
-  };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">

@@ -6,8 +6,8 @@ import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } fr
 import { Toaster } from "sonner";
 import App from "./App.tsx";
 import { ThemeProvider } from "./components/theme-provider.tsx";
+import { SavedDealsProvider } from "./hooks/use-saved-deals";
 import "./index.css";
-import { NotificationSubscriber } from "./notification.tsx";
 
 const Encrypt = lazy(() => import("./encrypt"));
 
@@ -18,26 +18,18 @@ const queryClient = new QueryClient();
 const RootRoute = createRootRoute({
   component: () => (
     <ThemeProvider defaultTheme="dark" storageKey="darkMode">
-      <Outlet />
-      <Toaster />
-      <NotificationSubscriber />
+      <SavedDealsProvider>
+        <Outlet />
+        <Toaster />
+      </SavedDealsProvider>
     </ThemeProvider>
   ),
 });
-
-type MySearch = {
-  notify?: string;
-};
 
 const IndexRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/",
   component: App,
-  validateSearch: (search: Record<string, unknown>): MySearch => {
-    return {
-      notify: search.notify as string | undefined,
-    };
-  },
 });
 
 const EncryptRoute = createRoute({
