@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function SkeletonGrid({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 p-4 justify-items-center sm:justify-items-start sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-3 rounded-xl border bg-card p-0 overflow-hidden">
           <Skeleton className="aspect-video w-full rounded-none" />

@@ -84,7 +84,7 @@ export const Ozb: FC<OzbProps> = ({ deal, hideOld = true }) => {
       </AccordionTrigger>
       <AccordionContent className="bg-muted/30">
         <div className="p-3 sm:p-4">
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 justify-items-center sm:justify-items-start sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {sorted.map((dealItem: OzbargainDeal) => (
               <DealCard key={dealItem.url} deal={dealItem} />
             ))}

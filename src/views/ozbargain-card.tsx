@@ -38,7 +38,7 @@ export const DealCard: FC<DealCardProps> = ({ deal }) => {
       className="group rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       aria-label={`${dealTitle} from ${provider}`}
     >
-      <Card className="flex flex-col justify-start gap-3 overflow-hidden border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 h-full pt-0 pb-1">
+      <Card className="flex flex-col max-w-75 justify-start gap-3 overflow-hidden border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 h-full pt-0 pb-1">
         <div className="relative aspect-video w-full overflow-hidden bg-muted">
           <img
             src={deal.thumbnail}
@@ -90,7 +90,7 @@ export const DealCard: FC<DealCardProps> = ({ deal }) => {
         </CardContent>
 
         <CardFooter className="mt-auto flex flex-col gap-2 px-4 pt-1 pb-4">
-          <div className="flex flex-wrap gap-1">
+          <div className="flex w-full flex-wrap gap-1">
             {deal.categories?.map((cat) => (
               <span
                 key={cat}

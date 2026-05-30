@@ -96,14 +96,14 @@ export const MyDay: FC = () => {
 
   return (
     <div className="p-3 sm:p-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 justify-items-center sm:justify-items-start sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {data.map((w, i) => {
           const weatherCode = w?.daily?.weather_code?.[0];
           const bgImage = getWeatherImage(weatherCode);
           return (
             <Card
               key={`weather-${w?.latitude}-${w?.longitude}-${w?.elevation}`}
-              className="relative overflow-hidden min-h-80 text-white py-0"
+              className="relative overflow-hidden min-h-80 text-white py-0 w-70"
             >
               <div
                 className="absolute inset-0 z-0"
