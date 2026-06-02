@@ -29,6 +29,19 @@ export const getOzbargainDeals = async (term: string, hideOld: boolean): Promise
   return hideOld ? response.filter((deal: OzbargainDeal) => deal.date <= 1) : response;
 };
 
+export const getOzbargainDealsBulk = async (terms: string[]): Promise<Record<string, OzbargainDeal[]>> => {
+  const data = await fetch(baseUrl + "/api/deals/", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ terms }),
+  });
+
+  return await data.json();
+};
+
 export const getOzbargainFrontpage = async (): Promise<OzbargainDeal[]> => {
   const data = await fetch(baseUrl + "/api/deals/", {
     headers: {
