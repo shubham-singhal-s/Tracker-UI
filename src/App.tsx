@@ -1,7 +1,8 @@
-import { ArrowUp, Eye, EyeClosed, Settings2, Zap } from "lucide-react";
+import { ArrowUp, Eye, EyeClosed, Search, Settings2, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import "./App.css";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
+import { Link } from "@tanstack/react-router";
 import { Toggle } from "./components/ui/toggle";
 import { cn } from "./lib/utils";
 import { DayAccordion } from "./views/accordions/day-accordion";
@@ -79,6 +80,16 @@ const App = () => {
           <TopDealsAccordion />
           <DealsAccordion hideOld={hideOld} />
         </Accordion>
+
+        <div className="mt-4 flex justify-center">
+          <Link
+            to="/product-deals"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            <Search size={16} />
+            Search product deals
+          </Link>
+        </div>
       </main>
 
       <button

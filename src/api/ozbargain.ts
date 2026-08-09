@@ -15,28 +15,18 @@ export interface OzbargainDeal {
   publishedAt: string;
 }
 
+export interface OzbargainDealsResponse {
+  deals: OzbargainDeal[];
+  error?: string;
+}
+
 const baseUrl = import.meta.env.VITE_IS_LOCAL ? "http://localhost:8787" : "https://randoms.shubham21197.workers.dev";
 
-export const getOzbargainDeals = async (term: string, hideOld: boolean): Promise<OzbargainDeal[]> => {
-  const data = await fetch(baseUrl + "/api/deals/" + term, {
+export const getOzbargainDeals = async (term: string): Promise<OzbargainDealsResponse> => {
+  const data = await fetch(baseUrl + "/api/deals/" + encodeURIComponent(term), {
     headers: {
       Accept: "application/json",
     },
-  });
-
-  const response = await data.json();
-
-  return hideOld ? response.filter((deal: OzbargainDeal) => deal.date <= 1) : response;
-};
-
-export const getOzbargainDealsBulk = async (terms: string[]): Promise<Record<string, OzbargainDeal[]>> => {
-  const data = await fetch(baseUrl + "/api/deals/", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ terms }),
   });
 
   return await data.json();

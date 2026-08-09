@@ -13,6 +13,8 @@ const Encrypt = lazy(() => import("./encrypt"));
 
 const About = lazy(() => import("./about"));
 
+const ProductDeals = lazy(() => import("./product-deals"));
+
 const queryClient = new QueryClient();
 
 const RootRoute = createRootRoute({
@@ -52,7 +54,17 @@ const AboutRoute = createRoute({
   ),
 });
 
-const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute, AboutRoute]);
+const ProductDealsRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: "/product-deals",
+  component: () => (
+    <Suspense fallback={<div className="p-4">Loading…</div>}>
+      <ProductDeals />
+    </Suspense>
+  ),
+});
+
+const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute, AboutRoute, ProductDealsRoute]);
 
 const router = createRouter({
   routeTree,
