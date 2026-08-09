@@ -49,7 +49,15 @@ const StressLog = () => {
     e.preventDefault();
     const entry = { ...form };
     setSubmitted(entry);
-    setTimeout(() => window.print(), 100);
+
+    const prevTitle = document.title;
+    const date = new Date().toISOString().slice(0, 10);
+    document.title = `Stress-CBT-${date}`;
+
+    setTimeout(() => {
+      window.print();
+      document.title = prevTitle;
+    }, 100);
   };
 
   const handleClear = () => {
