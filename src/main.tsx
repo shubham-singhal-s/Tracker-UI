@@ -15,6 +15,8 @@ const About = lazy(() => import("./about"));
 
 const ProductDeals = lazy(() => import("./product-deals"));
 
+const StressLog = lazy(() => import("./stress-log"));
+
 const queryClient = new QueryClient();
 
 const RootRoute = createRootRoute({
@@ -64,7 +66,17 @@ const ProductDealsRoute = createRoute({
   ),
 });
 
-const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute, AboutRoute, ProductDealsRoute]);
+const StressLogRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: "/stress-log",
+  component: () => (
+    <Suspense fallback={<div className="p-4">Loading…</div>}>
+      <StressLog />
+    </Suspense>
+  ),
+});
+
+const routeTree = RootRoute.addChildren([IndexRoute, EncryptRoute, AboutRoute, ProductDealsRoute, StressLogRoute]);
 
 const router = createRouter({
   routeTree,

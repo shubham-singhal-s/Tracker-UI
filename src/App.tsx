@@ -1,13 +1,14 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowUp, Eye, EyeClosed, Search, Settings2, Zap } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import "./App.css";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
-import { Link } from "@tanstack/react-router";
 import { Toggle } from "./components/ui/toggle";
 import { cn } from "./lib/utils";
 import { DayAccordion } from "./views/accordions/day-accordion";
 import { DealsAccordion } from "./views/accordions/deals-accordion";
 import { EpicAccordion } from "./views/accordions/epic-accordion";
+import { ToolsAccordion } from "./views/accordions/tools-accordion";
 import { TopDealsAccordion } from "./views/accordions/top-deals-accordion";
 import { Saver } from "./views/saver";
 import { Settings } from "./views/settings";
@@ -75,6 +76,7 @@ const App = () => {
 
       <main className="mx-auto max-w-7xl px-3 py-4 pb-24 sm:px-4 sm:py-6 sm:pb-28">
         <Accordion type="single" className="rounded-xl border bg-card overflow-hidden shadow-sm" collapsible>
+          <ToolsAccordion />
           <DayAccordion />
           <EpicAccordion />
           <TopDealsAccordion />
